@@ -1,1 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Padel Session Scheduler</title>
+<style>
+body { font-family: Arial; background:#f4f6f8; padding:20px; }
+.card { background:white; padding:20px; margin-bottom:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.08);}
+input, select, button { padding:8px; margin:5px 0; }
+button { background:#1f7a8c; color:white; border:none; cursor:pointer; }
+button:hover { background:#16697a; }
+.round { margin-bottom:15px; padding:10px; background:#eef6f8; border-radius:8px; }
+.court { margin-top:5px; }
+.sit { color:#b91c1c; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<h2>🎾 Smart Padel Session Scheduler</h2>
+
+<div class="card">
+<label>Number of Players:</label>
+<input type="number" id="numPlayers" min="4" value="10">
+
+<label>Total Session Time (minutes):</label>
+<input type="number" id="totalTime" value="90">
+
+<label>Round Length (minutes):</label>
+<input type="number" id="roundLength" value="8">
+
+<button onclick="createPlayerInputs()">Set Players</button>
+</div>
+
+<div class="card" id="playersSection" style="display:none;">
+<h3>Enter Player Names</h3>
+<div id="playerInputs"></div>
+<button onclick="generateSchedule()">Generate Schedule</button>
+</div>
+
+<div class="card" id="output"></div>
+
+<script>
+
+let players = [];
+let sitTracker = {};
+let lastSit = {};
+
+function createPlayerInputs(){
+  const n = parseInt(document.getElementById("numPlayers").value);
+  const container = document.getElementById("playerInputs");
+  container.innerHTML = "";
+  for(let i=1;i<=n;i++){
+    container.innerHTML += `<input type="text" id="p${i}" placeholder="Player ${i}"><br>`;
+  }
+  document.getElementById("playersSection").style.display="block";
+}
+
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+}
+
+function generateSchedule(){
+
+  players=[];
+  sitTracker={};
+  lastSit={};
+
+  const n = parseInt(document.getElementById("numPlayers").value);
+  const totalTime = parseInt(document.getElementById("totalTime").value);
+  const roundLength = parseInt(document.getElementById("roundLength").value);
+
+  const rounds = Math.floor(totalTime/roundLength);
+
+  for(let i=1;i<=n;i++){
+    const name = document.getElementById(`p${i}`).value || `Player ${i}`;
+    players.push(name);
+    sitTracker[name]=0;
+    lastSit[name]=-1;
+  }
+
+  let outputHTML = `<h3>Total Rounds: ${rounds}</h3>`;
+
+  for(let r=1;r<=rounds;r++){
+
+    shuffle(players);
+
+    let playing=[];
+    let sitting=[];
+
+    // 2 courts = 8 players playing max
+    const maxPlaying = Math.min(8, players.length - (players.length % 2));
+
+    for(let p of players){
+      if(playing.length < maxPlaying){
+        playing.push(p);
+      } else {
+        // Prevent consecutive sits
+        if(lastSit[p] === r-1){
+          playing.push(p);
+        } else {
+          sitting.push(p);
+        }
+      }
+    }
+
+    // balance if needed
+    while(playing.length > maxPlaying){
+      let moved = playing.pop();
+      sitting.push(moved);
+    }
+
+    sitting.forEach(p=>{
+      sitTracker[p]++;
+      lastSit[p]=r;
+    });
+
+    outputHTML += `<div class="round"><strong>Round ${r}</strong>`;
+
+    for(let c=0;c<2;c++){
+      let courtPlayers = playing.slice(c*4,(c*4)+4);
+      if(courtPlayers.length===4){
+        outputHTML += `<div class="court">Court ${c+1}: 
+        ${courtPlayers[0]} & ${courtPlayers[1]} 
+        vs 
+        ${courtPlayers[2]} & ${courtPlayers[3]}</div>`;
+      }
+    }
+
+    if(sitting.length){
+      outputHTML += `<div class="sit">Sitting Out: ${sitting.join(", ")}</div>`;
+    }
+
+    outputHTML += `</div>`;
+  }
+
+  outputHTML += "<h4>Sit Summary</h4>";
+  for(let p in sitTracker){
+    outputHTML += `${p}: ${sitTracker[p]} sits<br>`;
+  }
+
+  document.getElementById("output").innerHTML = outputHTML;
+}
+
+</script>
+</body>
+</html>
 
